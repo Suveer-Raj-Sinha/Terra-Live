@@ -50,8 +50,10 @@ export default function App() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-3 bg-slate-900 border-b border-slate-700 z-10 shrink-0">
         <div className="flex items-center gap-3">
-          <span className="text-red-500 text-xl">⚠</span>
-          <h1 className="text-lg font-bold tracking-tight">DisasterWatch</h1>
+          <svg className="w-6 h-6 text-sky-400 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19.36 10.04a6 6 0 0 0-11.33-1.6 5 5 0 0 0-6 4.96 5 5 0 0 0 5 5h12a4.5 4.5 0 0 0 4.5-4.5 4.5 4.5 0 0 0-4.17-3.86z"/>
+          </svg>
+          <h1 className="text-lg font-bold tracking-tight">Terra Live</h1>
           <span className="text-xs text-slate-500 font-mono">LIVE</span>
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
         </div>

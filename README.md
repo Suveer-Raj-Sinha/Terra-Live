@@ -1,6 +1,6 @@
-# ⚠ DisasterWatch
+# ☁ Terra Live
 
-DisasterWatch is a high-performance, full-stack real-time disaster monitoring platform. It aggregates global hazard feeds—including earthquakes, wildfires, volcanic activity, and tropical cyclones—into a unified, interactive map dashboard featuring a tectonic plate boundary overlay.
+Terra Live is a high-performance, full-stack real-time disaster monitoring platform. It aggregates global hazard feeds—including earthquakes, wildfires, volcanic activity, and tropical cyclones—into a unified, interactive map dashboard featuring a tectonic plate boundary overlay.
 
 Built with a fast **FastAPI** backend caching layer and a responsive **React (TypeScript) + Vite + Leaflet** frontend canvas.
 

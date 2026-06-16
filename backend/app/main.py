@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
         pass
 
 app = FastAPI(
-    title="DisasterWatch API",
+    title="Terra Live API",
     description="Real-time disaster monitoring API with SQLite caching and background sync",
     version="1.1.0",
     lifespan=lifespan,
@@ -104,4 +104,4 @@ app.include_router(storms.router)
 
 @app.get("/")
 async def root():
-    return {"status": "online", "app": "DisasterWatch API with SQLite Cache"}
+    return {"status": "online", "app": "Terra Live API with SQLite Cache"}

@@ -1,7 +1,7 @@
-# DisasterWatch: Comprehensive Technical Architecture Report
+# Terra Live: Comprehensive Technical Architecture Report
 
 ## 1. Executive Summary
-DisasterWatch is a full-stack natural hazard monitoring platform. It aggregates global hazard feeds—specifically seismic activity (USGS), thermal anomalies (NASA FIRMS), geological alerts (USGS Volcanoes), and meteorology (GDACS Tropical Cyclones)—into a unified database cache. The client dashboard renders these hazards dynamically on a Leaflet map, transitioning between localized heatmaps and high-performance custom vector markers. A tectonic plate boundary layer overlay provides geographical context to seismic and volcanic zones.
+Terra Live is a full-stack natural hazard monitoring platform. It aggregates global hazard feeds—specifically seismic activity (USGS), thermal anomalies (NASA FIRMS), geological alerts (USGS Volcanoes), and meteorology (GDACS Tropical Cyclones)—into a unified database cache. The client dashboard renders these hazards dynamically on a Leaflet map, transitioning between localized heatmaps and high-performance custom vector markers. A tectonic plate boundary layer overlay provides geographical context to seismic and volcanic zones.
 
 ---
 
@@ -225,7 +225,7 @@ The slide-out analytics drawer provides aggregated statistics calculated directl
     External HTTP requests are wrapped in isolated try-except blocks. If NASA FIRMS or GDACS experiences an outage, the backend sync loop will log the error and continue, serving cached database records without interrupting client operations.
 
 ### 6.2 Scaling & Performance Blueprint
-To deploy DisasterWatch to production serving thousands of concurrent users, the following adjustments should be made:
+To deploy Terra Live to production serving thousands of concurrent users, the following adjustments should be made:
 
 ```
 [Client Users] ---> [Nginx Load Balancer]
