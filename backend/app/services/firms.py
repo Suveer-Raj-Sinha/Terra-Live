@@ -14,43 +14,55 @@ def firms_confidence_to_severity(confidence) -> str:
         if str(confidence).lower() == "n": return "moderate"
         return "low"
 
-async def fetch_wildfires(days: int = 1, limit: int = 200) -> list[DisasterEvent]:
-    """
-    Fetch wildfire hotspots from NASA FIRMS.
-    For global queries ('world'), the API only allows 1 or 2 days of data.
-    """
-    if days >= 2:
-        days = 2
-    else:
-        days = 1
-
+async def fetch_from_firms(source: str, days: int, limit: int, client: httpx.AsyncClient) -> list[dict]:
+    """Fetch CSV data from a single FIRMS source."""
     url = (
         f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/"
-        f"{config.NASA_FIRMS_KEY}/VIIRS_SNPP_NRT/world/{days}"
+        f"{config.NASA_FIRMS_KEY}/{source}/world/{days}"
     )
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    try:
         response = await client.get(url)
         response.raise_for_status()
-        text = response.text
+        lines = response.text.strip().split("\n")
+        if len(lines) < 2:
+            return []
+        headers = lines[0].split(",")
+        rows = []
+        for line in lines[1:limit + 1]:
+            parts = line.split(",")
+            if len(parts) >= len(headers):
+                rows.append(dict(zip(headers, parts)))
+        return rows
+    except Exception as e:
+        print(f"FIRMS {source} fetch error: {e}")
+        return []
 
+async def fetch_wildfires(days: int = 2, limit: int = 500) -> list[DisasterEvent]:
+    days = min(days, 2)
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        # Fetch both VIIRS and MODIS in parallel
+        import asyncio
+        viirs_rows, modis_rows = await asyncio.gather(
+            fetch_from_firms("VIIRS_SNPP_NRT", days, limit // 2, client),
+            fetch_from_firms("MODIS_NRT", days, limit // 2, client),
+        )
+
+    all_rows = viirs_rows + modis_rows
+    seen_locations = set()
     events = []
-    lines = text.strip().split("\n")
-    if len(lines) < 2:
-        return events
 
-    headers = lines[0].split(",")
-
-    for i, line in enumerate(lines[1:limit + 1]):  # cap at limit
-        parts = line.split(",")
-        if len(parts) < len(headers):
-            continue
-
-        row = dict(zip(headers, parts))
-
+    for i, row in enumerate(all_rows):
         try:
             lat = float(row.get("latitude", 0))
             lon = float(row.get("longitude", 0))
+
+            # Deduplicate nearby points (round to 1 decimal)
+            location_key = (round(lat, 1), round(lon, 1))
+            if location_key in seen_locations:
+                continue
+            seen_locations.add(location_key)
+
             confidence = row.get("confidence", "0")
             acq_date = row.get("acq_date", "")
             acq_time = row.get("acq_time", "0000").zfill(4)

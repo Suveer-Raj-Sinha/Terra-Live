@@ -40,10 +40,39 @@ export function EventDetailPanel({ event, onClose }: Props) {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Stat label="Magnitude" value={event.magnitude ? `M${event.magnitude.toFixed(1)}` : "—"} />
-              <Stat label="Depth" value={event.depth_km ? `${event.depth_km.toFixed(1)} km` : "—"} />
-              <Stat label="Latitude" value={event.latitude.toFixed(3)} />
-              <Stat label="Longitude" value={event.longitude.toFixed(3)} />
+              {event.type === "earthquake" && (
+                <>
+                  <Stat label="Magnitude" value={event.magnitude ? `M${event.magnitude.toFixed(1)}` : "—"} />
+                  <Stat label="Depth" value={event.depth_km ? `${event.depth_km.toFixed(1)} km` : "—"} />
+                </>
+              )}
+              {event.type === "wildfire" && (
+                <>
+                  <Stat label="Confidence" value={event.description?.match(/Confidence:\s*([\w%]+)/)?.[1] ?? "Nominal"} />
+                  <Stat label="Source" value={event.source} />
+                </>
+              )}
+              {event.type === "volcano" && (
+                <>
+                  <Stat label="Alert Level" value={event.description?.match(/Level:\s*(\w+)/)?.[1] ?? "Advisory"} />
+                  <Stat label="Color Code" value={event.description?.match(/Color:\s*(\w+)/)?.[1] ?? "Yellow"} />
+                  <Stat label="Threat Level" value={event.description?.match(/Threat:\s*(\w+)/)?.[1] ?? "Moderate"} />
+                  <Stat label="Region" value={event.region ?? "Global"} />
+                </>
+              )}
+              {event.type === "storm" && (
+                <>
+                  <Stat label="Wind Speed" value={event.magnitude ? `${event.magnitude.toFixed(0)} km/h` : "—"} />
+                  <Stat label="Classification" value={event.magnitude && event.magnitude >= 119 ? "Hurricane/Typhoon" : "Tropical Storm"} />
+                  <Stat label="Region" value={event.region ?? "Global"} />
+                </>
+              )}
+
+              {/* Coordinates Section */}
+              <div className="col-span-2 grid grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                <Stat label="Latitude" value={event.latitude.toFixed(4)} />
+                <Stat label="Longitude" value={event.longitude.toFixed(4)} />
+              </div>
             </div>
 
             <div>

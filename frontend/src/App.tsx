@@ -10,13 +10,39 @@ export default function App() {
   const [selectedEvent, setSelectedEvent] = useState<DisasterEvent | null>(null);
   const [showLabels, setShowLabels] = useState(true);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showPlates, setShowPlates] = useState(false);
   const [filters, setFilters] = useState<EventFilters>({
     days: 7,
-    minMagnitude: 2.5,
-    types: ["earthquake", "wildfire"],
+    types: ["earthquake", "wildfire", "volcano", "storm"],  // all four on by default
+    minMagnitude: 4.5,
+    minWildfireConfidence: "low",
+    minVolcanoAlert: "low",
+    minStormWindSpeed: 0,
   });
 
-  const { data, isLoading, isError } = useEvents(filters);
+  const { data, isLoading, isError } = useEvents(filters.days, filters.types);
+
+  const filteredEvents = data?.events.filter(event => {
+    if (event.type === "earthquake") {
+      return (event.magnitude ?? 0) >= filters.minMagnitude;
+    }
+    if (event.type === "wildfire") {
+      const confMap = { low: 1, moderate: 2, high: 3, extreme: 4 };
+      const eventConf = confMap[event.severity] ?? 1;
+      const filterConf = confMap[filters.minWildfireConfidence] ?? 1;
+      return eventConf >= filterConf;
+    }
+    if (event.type === "volcano") {
+      const alertMap = { low: 1, moderate: 2, high: 3, extreme: 4 };
+      const eventAlert = alertMap[event.severity] ?? 1;
+      const filterAlert = alertMap[filters.minVolcanoAlert] ?? 1;
+      return eventAlert >= filterAlert;
+    }
+    if (event.type === "storm") {
+      return (event.magnitude ?? 0) >= filters.minStormWindSpeed;
+    }
+    return true;
+  }) ?? [];
 
   return (
     <div className="flex flex-col h-screen bg-slate-950 text-white">
@@ -31,7 +57,7 @@ export default function App() {
         </div>
         <div className="text-sm text-slate-400">
           {isLoading && "Loading..."}
-          {data && `${data.total} events`}
+          {data && `${filteredEvents.length} events`}
           {isError && "Failed to load data"}
         </div>
       </header>
@@ -44,6 +70,8 @@ export default function App() {
         onToggleLabels={() => setShowLabels(!showLabels)}
         showAnalytics={showAnalytics}
         onToggleAnalytics={() => setShowAnalytics(!showAnalytics)}
+        showPlates={showPlates}
+        onTogglePlates={() => setShowPlates(!showPlates)}
       />
 
       {/* Map */}
@@ -54,10 +82,11 @@ export default function App() {
           </div>
         )}
         <DisasterMap
-          events={data?.events ?? []}
+          events={filteredEvents}
           selectedEvent={selectedEvent}
           onSelectEvent={setSelectedEvent}
           showLabels={showLabels}
+          showPlates={showPlates}
         />
         <EventDetailPanel
           event={selectedEvent}
@@ -65,8 +94,9 @@ export default function App() {
         />
         <AnalyticsPanel
           isOpen={showAnalytics}
-          events={data?.events ?? []}
+          events={filteredEvents}
           onClose={() => setShowAnalytics(false)}
+          onSelectEvent={setSelectedEvent}
         />
       </div>
     </div>

@@ -3,18 +3,21 @@ import { eventsApi } from "../api/client";
 
 export interface EventFilters {
   days: number;
-  minMagnitude: number;
   types: string[];
+  minMagnitude: number;
+  minWildfireConfidence: "low" | "moderate" | "high";
+  minVolcanoAlert: "low" | "moderate" | "high" | "extreme";
+  minStormWindSpeed: number;
 }
 
-export function useEvents(filters: EventFilters) {
+export function useEvents(days: number, types: string[]) {
   return useQuery({
-    queryKey: ["events", filters],
+    queryKey: ["events", days, types.join(",")],
     queryFn: () =>
       eventsApi.getAll({
-        days: filters.days,
-        min_magnitude: filters.minMagnitude,
-        types: filters.types.join(","),
+        days,
+        min_magnitude: 2.5,
+        types: types.join(","),
       }),
     refetchInterval: 5 * 60 * 1000,
     staleTime: 2 * 60 * 1000,

@@ -16,6 +16,11 @@ export const wildfireApi = {
     api.get<EventsResponse>("/wildfires", { params }).then(r => r.data),
 };
 
+export const stormApi = {
+  getAll: (params?: { days?: number }) =>
+    api.get<EventsResponse>("/storms", { params }).then(r => r.data),
+};
+
 export const eventsApi = {
   getAll: (params?: { days?: number; min_magnitude?: number; types?: string }) =>
     api.get<EventsResponse>("/events", { params }).then(r => r.data),

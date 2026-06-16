@@ -3,11 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app import config
-from app.routers import events, earthquakes, wildfires, volcanoes
+from app.routers import events, earthquakes, wildfires, volcanoes, storms
 from app.services import db
 from app.services.usgs import fetch_earthquakes
 from app.services.firms import fetch_wildfires
 from app.services.volcanoes import fetch_volcanoes
+from app.services.storms import fetch_storms
 
 async def sync_all_feeds():
     print("Background Sync: Starting data fetch from all feeds...")
@@ -39,6 +40,15 @@ async def sync_all_feeds():
         print(f"Background Sync: Successfully synced {len(volcs)} volcanoes.")
     except Exception as e:
         print(f"Background Sync Error [Volcanoes]: {e}")
+
+    # 4. Storms
+    try:
+        print("Background Sync: Fetching Storms from GDACS...")
+        stms = await fetch_storms()
+        db.save_events(stms)
+        print(f"Background Sync: Successfully synced {len(stms)} storms.")
+    except Exception as e:
+        print(f"Background Sync Error [Storms]: {e}")
 
 async def background_sync_loop():
     # Immediate initial sync on startup
@@ -90,6 +100,7 @@ app.include_router(events.router)
 app.include_router(earthquakes.router)
 app.include_router(wildfires.router)
 app.include_router(volcanoes.router)
+app.include_router(storms.router)
 
 @app.get("/")
 async def root():

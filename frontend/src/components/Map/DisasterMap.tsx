@@ -1,20 +1,28 @@
-import { useState, useEffect } from "react";
-import { MapContainer, TileLayer, ZoomControl, useMapEvents, useMap } from "react-leaflet";
+import { useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, ZoomControl, useMapEvents, useMap, GeoJSON } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { DisasterEvent } from "../../types/events";
 import { EarthquakeMarker } from "./EarthquakeMarker";
 import { WildfireMarker } from "./WildfireMarker";
 import { VolcanoMarker } from "./VolcanoMarker";
+import { StormMarker } from "./StormMarker";
+import { HeatmapLayer } from "./HeatmapLayer";
 
 interface Props {
   events: DisasterEvent[];
   selectedEvent: DisasterEvent | null;
   onSelectEvent: (event: DisasterEvent) => void;
   showLabels: boolean;
+  showPlates: boolean;
 }
+
+const HEATMAP_ZOOM_THRESHOLD = 5;
 
 function ZoomListener({ onChange }: { onChange: (zoom: number) => void }) {
   useMapEvents({
+    zoom: (e) => {
+      onChange(e.target.getZoom());
+    },
     zoomend: (e) => {
       onChange(e.target.getZoom());
     },
@@ -28,8 +36,6 @@ function MapViewController({ selectedEvent }: { selectedEvent: DisasterEvent | n
   useEffect(() => {
     if (selectedEvent) {
       const currentZoom = map.getZoom();
-      // If we are zoomed out, fly to the event and zoom in to level 6.
-      // If we are already zoomed in (level >= 6), pan to the event and maintain the zoom level.
       const targetZoom = currentZoom < 6 ? 6 : currentZoom;
       map.flyTo([selectedEvent.latitude, selectedEvent.longitude], targetZoom, {
         duration: 1.2,
@@ -41,8 +47,37 @@ function MapViewController({ selectedEvent }: { selectedEvent: DisasterEvent | n
   return null;
 }
 
-export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels }: Props) {
+export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels, showPlates }: Props) {
   const [zoom, setZoom] = useState(2);
+  const [debouncedZoom, setDebouncedZoom] = useState(2);
+  const [platesData, setPlatesData] = useState<any>(null);
+  const zoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    fetch("/pb2002_boundaries.json")
+      .then(res => res.json())
+      .then(data => setPlatesData(data))
+      .catch(err => console.error("Failed to load plate boundaries:", err));
+  }, []);
+
+  useEffect(() => {
+    if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current);
+    zoomTimerRef.current = setTimeout(() => {
+      setDebouncedZoom(zoom);
+    }, 150);
+
+    return () => {
+      if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current);
+    };
+  }, [zoom]);
+
+  const showHeatmap = debouncedZoom < HEATMAP_ZOOM_THRESHOLD;
+  const showMarkers = debouncedZoom >= HEATMAP_ZOOM_THRESHOLD;
+
+  const earthquakeEvents = events.filter(e => e.type === "earthquake");
+  const wildfireEvents = events.filter(e => e.type === "wildfire");
+  const volcanoEvents = events.filter(e => e.type === "volcano");
+  const stormEvents = events.filter(e => e.type === "storm");
 
   return (
     <div className="relative w-full h-full">
@@ -72,11 +107,54 @@ export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels }
         />
         <ZoomControl position="bottomright" />
 
-        {events.map(event => {
+        {/* Tectonic Plates Overlay */}
+        {showPlates && platesData && (
+          <GeoJSON
+            data={platesData}
+            style={{
+              color: "#ea580c", // Subtle orange
+              weight: 1.5,
+              dashArray: "4, 4",
+              opacity: 0.7,
+            }}
+          />
+        )}
+
+        {/* Heatmap layers */}
+        {earthquakeEvents.length > 0 && (
+          <HeatmapLayer
+            events={earthquakeEvents}
+            type="earthquake"
+            visible={showHeatmap}
+          />
+        )}
+        {wildfireEvents.length > 0 && (
+          <HeatmapLayer
+            events={wildfireEvents}
+            type="wildfire"
+            visible={showHeatmap}
+          />
+        )}
+        {volcanoEvents.length > 0 && (
+          <HeatmapLayer
+            events={volcanoEvents}
+            type="volcano"
+            visible={showHeatmap}
+          />
+        )}
+        {stormEvents.length > 0 && (
+          <HeatmapLayer
+            events={stormEvents}
+            type="storm"
+            visible={showHeatmap}
+          />
+        )}
+
+        {/* Individual markers */}
+        {showMarkers && events.map(event => {
           const isSelected = selectedEvent?.id === event.id;
-          // Only show labels when zoom is zoomed-in (>= 5), OR the event is critical (high/extreme severity), OR it is currently selected.
           const labelVisible = showLabels && (
-            zoom >= 5 ||
+            debouncedZoom >= 5 ||
             event.severity === "high" ||
             event.severity === "extreme" ||
             isSelected
@@ -101,7 +179,7 @@ export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels }
                 isSelected={isSelected}
                 onClick={onSelectEvent}
                 showLabels={labelVisible}
-                zoom={zoom}
+                zoom={debouncedZoom}
               />
             );
           }
@@ -113,7 +191,19 @@ export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels }
                 isSelected={isSelected}
                 onClick={onSelectEvent}
                 showLabels={labelVisible}
-                zoom={zoom}
+                zoom={debouncedZoom}
+              />
+            );
+          }
+          if (event.type === "storm") {
+            return (
+              <StormMarker
+                key={event.id}
+                event={event}
+                isSelected={isSelected}
+                onClick={onSelectEvent}
+                showLabels={labelVisible}
+                zoom={debouncedZoom}
               />
             );
           }
@@ -121,51 +211,89 @@ export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels }
         })}
       </MapContainer>
 
-      {/* Legend Overlay */}
+      {/* Zoom hint */}
+      {showHeatmap && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-full px-4 py-1.5 text-xs text-slate-400 pointer-events-none">
+          Zoom in to see individual events
+        </div>
+      )}
+
+      {/* Legend */}
       <div className="absolute bottom-6 left-6 z-[1000] bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg p-4 shadow-2xl text-xs space-y-3 pointer-events-none select-none">
         <h3 className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Legend</h3>
-        
-        {/* Disaster Types */}
-        <div className="space-y-1.5">
-          <p className="text-[10px] text-slate-500 uppercase font-semibold">Event Types</p>
-          <div className="flex items-center gap-2 text-slate-300">
-            <span className="inline-block w-3 h-3 rounded-full border border-slate-400 bg-blue-500/80"></span>
-            <span>Earthquake (Circle)</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-300">
-            <span className="inline-block w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-orange-500"></span>
-            <span>Wildfire (Triangle)</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-300">
-            <svg width="12" height="12" viewBox="0 0 14 14" className="inline-block ml-[2px] mr-[2px]">
-              <path d="M 1,12 L 5,3 L 7,6 L 9,3 L 13,12 Z" fill="#22c55e" fillOpacity="0.8" stroke="#94a3b8" strokeWidth="1" />
-            </svg>
-            <span>Volcano (Crater)</span>
-          </div>
-        </div>
-        
-        {/* Severity levels */}
-        <div className="space-y-1.5 pt-1.5 border-t border-slate-800">
-          <p className="text-[10px] text-slate-500 uppercase font-semibold">Severity / Alert Level</p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-            <div className="flex items-center gap-1.5 text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              <span>Low / Normal</span>
+
+        {showHeatmap ? (
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-slate-500 uppercase font-semibold">Heatmap Mode</p>
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #1d4ed8, #a78bfa)" }}></span>
+              <span>Earthquakes</span>
             </div>
-            <div className="flex items-center gap-1.5 text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-              <span>Mod. / Advisory</span>
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #ea580c, #fbbf24)" }}></span>
+              <span>Wildfires</span>
             </div>
-            <div className="flex items-center gap-1.5 text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-              <span>High / Watch</span>
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #7c3aed, #f0abfc)" }}></span>
+              <span>Volcanoes</span>
             </div>
-            <div className="flex items-center gap-1.5 text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-magenta-500" style={{ backgroundColor: "#d946ef" }}></span>
-              <span>Ext. / Warning</span>
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #0284c7, #22d3ee)" }}></span>
+              <span>Storms</span>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="space-y-1.5">
+            <p className="text-[10px] text-slate-500 uppercase font-semibold">Event Types</p>
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="inline-block w-3 h-3 rounded-full bg-blue-500/80"></span>
+              <span>Earthquake</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="inline-block w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-orange-500"></span>
+              <span>Wildfire</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-300">
+              <svg width="12" height="12" viewBox="0 0 14 14" className="inline-block">
+                <path d="M 1,12 L 5,3 L 7,6 L 9,3 L 13,12 Z" fill="#22c55e" fillOpacity="0.8" stroke="#94a3b8" strokeWidth="1" />
+              </svg>
+              <span>Volcano</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-300">
+              <span className="inline-block w-3 h-3 text-center leading-3 font-semibold text-cyan-400 select-none">🌀</span>
+              <span>Storm</span>
+            </div>
+            
+            {showPlates && (
+              <div className="flex items-center gap-2 text-slate-300 pt-1.5 border-t border-slate-800">
+                <span className="inline-block w-4 h-0 border-t border-dashed border-orange-500"></span>
+                <span>Plate Boundaries</span>
+              </div>
+            )}
+
+            <div className="space-y-1 pt-1.5 border-t border-slate-800">
+              <p className="text-[10px] text-slate-500 uppercase font-semibold">Severity</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  <span>Low</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                  <span>Moderate</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                  <span>High</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-slate-300">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#d946ef" }}></span>
+                  <span>Extreme</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
