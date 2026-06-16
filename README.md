@@ -123,6 +123,47 @@ Open **[http://localhost:5173/](http://localhost:5173/)** to view the applicatio
 
 ---
 
+## 🌐 Deployment
+
+*   **Live Demo**: [https://terra-live.vercel.app](https://terra-live.vercel.app)
+*   **API Service**: [https://terra-live.onrender.com](https://terra-live.onrender.com)
+*   **API Docs**: [https://terra-live.onrender.com/docs](https://terra-live.onrender.com/docs)
+
+### **Backend — Render**
+
+Create a new **Web Service** on [render.com](https://render.com) and connect your GitHub repository.
+
+Configure the service with the following settings:
+*   **Root Directory**: `backend`
+*   **Runtime**: `Python 3`
+*   **Build Command**: `pip install -r requirements.txt`
+*   **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+
+Add the following **Environment Variables**:
+*   `NASA_FIRMS_KEY` = `your_nasa_firms_api_key`
+*   `CORS_ORIGINS` = `https://your-app.vercel.app`
+*   `DEBUG` = `False`
+*   `PYTHON_VERSION` = `3.11.0`
+
+> ⚠️ **Free Tier Note**: The instance spins down after 15 minutes of inactivity. The first request after sleep may take ~50 seconds to wake up.
+
+### **Frontend — Vercel**
+
+Import your GitHub repository on [vercel.com](https://vercel.com).
+
+Configure the project with the following settings:
+*   **Framework Preset**: `Vite`
+*   **Root Directory**: `frontend`
+*   **Build Command**: `npm run build`
+*   **Output Directory**: `dist`
+
+Add the following **Environment Variable**:
+*   `VITE_API_URL` = `https://your-backend.onrender.com`
+
+*Note: After deploying the frontend, go back to Render and update your `CORS_ORIGINS` environment variable to your exact Vercel deployment URL, then redeploy the backend.*
+
+---
+
 ## 📜 Citations & Attributions
 
 *   **Tectonic Plate Boundaries**: Original dataset published by Peter Bird (2003) *An updated digital model of plate boundaries*, GeoJSON conversion compiled by Hugo Ahlenius (Nordpil).
