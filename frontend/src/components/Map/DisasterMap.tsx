@@ -95,11 +95,14 @@ export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels, 
         className="w-full h-full"
         style={{ background: "#0f172a" }}
         preferCanvas={true}
-        zoomSnap={0.5}
+        zoomSnap={isMobile ? 0 : 0.5}
         zoomDelta={0.5}
         wheelPxPerZoomLevel={90}
         inertia={true}
-        inertiaDeceleration={2000}
+        inertiaDeceleration={isMobile ? 3000 : 2000}
+        bounceAtZoomLimits={false}
+        tapTolerance={isMobile ? 15 : 10}
+        touchZoom={true}
       >
         <ZoomListener onChange={setZoom} />
         <MapViewController selectedEvent={selectedEvent} />
