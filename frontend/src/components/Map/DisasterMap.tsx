@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { MapContainer, TileLayer, ZoomControl, useMapEvents, useMap, GeoJSON } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { DisasterEvent } from "../../types/events";
@@ -48,8 +49,10 @@ function MapViewController({ selectedEvent }: { selectedEvent: DisasterEvent | n
 }
 
 export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels, showPlates }: Props) {
+  const isMobile = useIsMobile();
   const [zoom, setZoom] = useState(2);
   const [debouncedZoom, setDebouncedZoom] = useState(2);
+  const [legendOpen, setLegendOpen] = useState(!isMobile);
   const [platesData, setPlatesData] = useState<any>(null);
   const zoomTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -213,86 +216,97 @@ export function DisasterMap({ events, selectedEvent, onSelectEvent, showLabels, 
 
       {/* Zoom hint */}
       {showHeatmap && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-full px-4 py-1.5 text-xs text-slate-400 pointer-events-none">
+        <div className="absolute top-3 md:top-4 left-1/2 -translate-x-1/2 z-[1000] bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-full px-4 py-1.5 text-xs text-slate-400 pointer-events-none">
           Zoom in to see individual events
         </div>
       )}
 
       {/* Legend */}
-      <div className="absolute bottom-6 left-6 z-[1000] bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg p-4 shadow-2xl text-xs space-y-3 pointer-events-none select-none">
-        <h3 className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Legend</h3>
+      <div className="absolute bottom-6 left-6 z-[1000] bg-slate-900/90 backdrop-blur-sm border border-slate-700 rounded-lg p-2.5 md:p-4 shadow-2xl text-xs space-y-3 pointer-events-none select-none">
+        <button
+          onClick={() => setLegendOpen(prev => !prev)}
+          className="pointer-events-auto cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg p-1.5 flex items-center gap-1 text-[10px] text-slate-400 transition-colors"
+        >
+          📍 {legendOpen ? "Legend ▲" : "Legend ▼"}
+        </button>
 
-        {showHeatmap ? (
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-slate-500 uppercase font-semibold">Heatmap Mode</p>
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #1d4ed8, #a78bfa)" }}></span>
-              <span>Earthquakes</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #ea580c, #fbbf24)" }}></span>
-              <span>Wildfires</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #7c3aed, #f0abfc)" }}></span>
-              <span>Volcanoes</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #0284c7, #22d3ee)" }}></span>
-              <span>Storms</span>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-1.5">
-            <p className="text-[10px] text-slate-500 uppercase font-semibold">Event Types</p>
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="inline-block w-3 h-3 rounded-full bg-blue-500/80"></span>
-              <span>Earthquake</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="inline-block w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-orange-500"></span>
-              <span>Wildfire</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <svg width="12" height="12" viewBox="0 0 14 14" className="inline-block">
-                <path d="M 1,12 L 5,3 L 7,6 L 9,3 L 13,12 Z" fill="#22c55e" fillOpacity="0.8" stroke="#94a3b8" strokeWidth="1" />
-              </svg>
-              <span>Volcano</span>
-            </div>
-            <div className="flex items-center gap-2 text-slate-300">
-              <span className="inline-block w-3 h-3 text-center leading-3 font-semibold text-cyan-400 select-none">🌀</span>
-              <span>Storm</span>
-            </div>
-            
-            {showPlates && (
-              <div className="flex items-center gap-2 text-slate-300 pt-1.5 border-t border-slate-800">
-                <span className="inline-block w-4 h-0 border-t border-dashed border-orange-500"></span>
-                <span>Plate Boundaries</span>
+        {legendOpen && (
+          <>
+            <h3 className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Legend</h3>
+
+            {showHeatmap ? (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-slate-500 uppercase font-semibold">Heatmap Mode</p>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #1d4ed8, #a78bfa)" }}></span>
+                  <span>Earthquakes</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #ea580c, #fbbf24)" }}></span>
+                  <span>Wildfires</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #7c3aed, #f0abfc)" }}></span>
+                  <span>Volcanoes</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <span className="inline-block w-3 h-3 rounded-sm" style={{ background: "linear-gradient(to right, #0284c7, #22d3ee)" }}></span>
+                  <span>Storms</span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-slate-500 uppercase font-semibold">Event Types</p>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <span className="inline-block w-3 h-3 rounded-full bg-blue-500/80"></span>
+                  <span>Earthquake</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <span className="inline-block w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-orange-500"></span>
+                  <span>Wildfire</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <svg width="12" height="12" viewBox="0 0 14 14" className="inline-block">
+                    <path d="M 1,12 L 5,3 L 7,6 L 9,3 L 13,12 Z" fill="#22c55e" fillOpacity="0.8" stroke="#94a3b8" strokeWidth="1" />
+                  </svg>
+                  <span>Volcano</span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-300">
+                  <span className="inline-block w-3 h-3 text-center leading-3 font-semibold text-cyan-400 select-none">🌀</span>
+                  <span>Storm</span>
+                </div>
+                
+                {showPlates && (
+                  <div className="flex items-center gap-2 text-slate-300 pt-1.5 border-t border-slate-800">
+                    <span className="inline-block w-4 h-0 border-t border-dashed border-orange-500"></span>
+                    <span>Plate Boundaries</span>
+                  </div>
+                )}
+
+                <div className="space-y-1 pt-1.5 border-t border-slate-800">
+                  <p className="text-[10px] text-slate-500 uppercase font-semibold">Severity</p>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      <span>Low</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                      <span>Moderate</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                      <span>High</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-300">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#d946ef" }}></span>
+                      <span>Extreme</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-
-            <div className="space-y-1 pt-1.5 border-t border-slate-800">
-              <p className="text-[10px] text-slate-500 uppercase font-semibold">Severity</p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  <span>Low</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                  <span>Moderate</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                  <span>High</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-slate-300">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: "#d946ef" }}></span>
-                  <span>Extreme</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          </>
         )}
       </div>
     </div>

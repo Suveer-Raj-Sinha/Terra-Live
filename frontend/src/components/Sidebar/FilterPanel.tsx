@@ -1,3 +1,4 @@
+import { motion, AnimatePresence } from "framer-motion";
 import type { EventFilters } from "../../hooks/useEvents";
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
   onToggleAnalytics: () => void;
   showPlates: boolean;
   onTogglePlates: () => void;
+  isMobileOpen: boolean;
+  onMobileClose: () => void;
 }
 
 const DISASTER_TYPES = [
@@ -27,6 +30,8 @@ export function FilterPanel({
   onToggleAnalytics,
   showPlates,
   onTogglePlates,
+  isMobileOpen,
+  onMobileClose,
 }: Props) {
   const toggleType = (type: string) => {
     const current = filters.types;
@@ -37,20 +42,19 @@ export function FilterPanel({
     onChange({ ...filters, types: updated });
   };
 
-  return (
-    <div className="bg-slate-900 border-b border-slate-700 flex flex-col shrink-0">
-      
+  const filterContent = (
+    <>
       {/* Top Row: General Filters */}
-      <div className="px-6 py-3 flex items-center gap-6 border-b border-slate-800/80">
+      <div className="px-3 md:px-6 py-3 flex flex-col md:flex-row md:items-center gap-3 md:gap-6 border-b border-slate-800/80">
 
         {/* Disaster type toggles */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 uppercase tracking-wider mr-1">Type</span>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 -mx-1 px-1">
+          <span className="text-xs text-slate-500 uppercase tracking-wider mr-1 shrink-0">Type</span>
           {DISASTER_TYPES.map(dt => (
             <button
               key={dt.value}
               onClick={() => toggleType(dt.value)}
-              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors shrink-0 ${
                 filters.types.includes(dt.value)
                   ? "bg-blue-600 border-blue-500 text-white"
                   : "bg-slate-800 border-slate-600 text-slate-400 hover:border-slate-400"
@@ -63,7 +67,7 @@ export function FilterPanel({
 
         {/* Days range */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 uppercase tracking-wider">Days</span>
+          <span className="text-xs text-slate-500 uppercase tracking-wider shrink-0">Days</span>
           {[1, 3, 7, 14].map(d => (
             <button
               key={d}
@@ -80,8 +84,8 @@ export function FilterPanel({
         </div>
 
         {/* Toggles on right */}
-        <div className="flex items-center gap-2 ml-auto">
-          <span className="text-xs text-slate-500 uppercase tracking-wider">Show</span>
+        <div className="flex items-center gap-2 md:ml-auto flex-wrap">
+          <span className="text-xs text-slate-500 uppercase tracking-wider shrink-0">Show</span>
           
           {/* Toggle Tectonic Plates */}
           <button
@@ -122,12 +126,12 @@ export function FilterPanel({
       </div>
 
       {/* Bottom Row: Dynamic Hazard-Specific Filters */}
-      <div className="px-6 py-2 bg-slate-950/40 flex flex-wrap items-center gap-x-8 gap-y-2.5 text-xs">
+      <div className="px-3 md:px-6 py-2 bg-slate-950/40 flex flex-wrap items-center gap-x-4 md:gap-x-8 gap-y-2.5 text-xs">
         
         {/* Earthquakes magnitude filter */}
         {filters.types.includes("earthquake") && (
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">🌍 Earthquake Min Mag:</span>
+            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">🌍 Min Mag:</span>
             {[2.5, 4.0, 5.5, 7.0].map(m => (
               <button
                 key={m}
@@ -147,7 +151,7 @@ export function FilterPanel({
         {/* Wildfires confidence filter */}
         {filters.types.includes("wildfire") && (
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">🔥 Wildfire Confidence:</span>
+            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">🔥 Confidence:</span>
             {(["low", "moderate", "high"] as const).map(conf => (
               <button
                 key={conf}
@@ -167,7 +171,7 @@ export function FilterPanel({
         {/* Volcanoes alert filter */}
         {filters.types.includes("volcano") && (
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">🌋 Volcano Alert:</span>
+            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">🌋 Alert:</span>
             {(["low", "moderate", "high", "extreme"] as const).map(alert => (
               <button
                 key={alert}
@@ -187,7 +191,7 @@ export function FilterPanel({
         {/* Storms wind speed filter */}
         {filters.types.includes("storm") && (
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">🌀 Storm Wind Speed:</span>
+            <span className="text-[10px] text-slate-500 uppercase font-semibold tracking-wider">🌀 Wind:</span>
             {[0, 119, 178].map(speed => (
               <button
                 key={speed}
@@ -198,13 +202,55 @@ export function FilterPanel({
                     : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500"
                 }`}
               >
-                {speed === 0 ? "Any" : speed === 119 ? "Cat 1+ (119+ km/h)" : "Cat 3+ (178+ km/h)"}
+                {speed === 0 ? "Any" : speed === 119 ? "Cat 1+" : "Cat 3+"}
               </button>
             ))}
           </div>
         )}
       </div>
+    </>
+  );
 
-    </div>
+  return (
+    <>
+      {/* Desktop: always visible */}
+      <div className="hidden md:flex bg-slate-900 border-b border-slate-700 flex-col shrink-0">
+        {filterContent}
+      </div>
+
+      {/* Mobile: animated overlay */}
+      <AnimatePresence>
+        {isMobileOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden fixed inset-0 bg-black/50 z-40"
+              onClick={onMobileClose}
+            />
+            {/* Panel */}
+            <motion.div
+              initial={{ y: "-100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "-100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              className="md:hidden fixed top-[49px] left-0 right-0 z-50 bg-slate-900 border-b border-slate-700 flex flex-col shadow-2xl max-h-[70vh] overflow-y-auto mobile-scroll rounded-b-2xl"
+            >
+              {filterContent}
+              {/* Close button at bottom */}
+              <button
+                onClick={onMobileClose}
+                className="mx-3 mb-3 mt-1 py-2 rounded-xl bg-slate-800 border border-slate-600 text-slate-400 text-xs font-semibold hover:bg-slate-700 transition-colors"
+              >
+                Apply & Close
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

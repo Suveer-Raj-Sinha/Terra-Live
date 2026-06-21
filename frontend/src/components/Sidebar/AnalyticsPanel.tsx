@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import { motion, AnimatePresence } from "framer-motion";
 import type { DisasterEvent } from "../../types/events";
 
@@ -26,6 +27,7 @@ const SEVERITY_LABELS: Record<string, string> = {
 export function AnalyticsPanel({ isOpen, events, onClose, onSelectEvent }: Props) {
   const [activeTab, setActiveTab] = useState<"overview" | "seismic" | "advisories">("overview");
   const [hoveredBar, setHoveredBar] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const totalCount = events.length;
   const quakes = events.filter((e) => e.type === "earthquake");
@@ -91,11 +93,14 @@ export function AnalyticsPanel({ isOpen, events, onClose, onSelectEvent }: Props
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ x: -400, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -400, opacity: 0 }}
+          initial={isMobile ? { y: '100%', opacity: 0 } : { x: -400, opacity: 0 }}
+          animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
+          exit={isMobile ? { y: '100%', opacity: 0 } : { x: -400, opacity: 0 }}
           transition={{ type: "spring", damping: 26, stiffness: 220 }}
-          className="absolute left-0 top-0 h-full w-[410px] bg-slate-900/95 backdrop-blur-md border-r border-slate-700/60 z-[1000] overflow-y-auto shadow-2xl flex flex-col font-sans"
+          className={isMobile
+            ? "fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[1000] overflow-y-auto shadow-2xl flex flex-col font-sans mobile-scroll"
+            : "absolute left-0 top-0 h-full w-[410px] bg-slate-900/95 backdrop-blur-md border-r border-slate-700/60 z-[1000] overflow-y-auto shadow-2xl flex flex-col font-sans"
+          }
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-800/80 bg-slate-900/40 sticky top-0 backdrop-blur-md z-20">
@@ -225,7 +230,7 @@ export function AnalyticsPanel({ isOpen, events, onClose, onSelectEvent }: Props
                 <div className="bg-slate-850 border border-slate-800/80 rounded-xl p-4 shadow-lg space-y-4">
                   <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Magnitude Distributions</h3>
                   
-                  <div className="flex justify-center pt-2">
+                  <div className={`flex justify-center pt-2${isMobile ? ' overflow-x-auto' : ''}`}>
                     <svg width={chartWidth} height={chartHeight} className="overflow-visible select-none">
                       {/* Grid Lines */}
                       {[0, 0.5, 1].map((val) => {

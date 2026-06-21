@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import type { DisasterEvent } from "../../types/events";
+import { useIsMobile } from "../../hooks/useIsMobile";
 
 interface Props {
   event: DisasterEvent | null;
@@ -14,15 +15,31 @@ const SEVERITY_BADGE: Record<string, string> = {
 };
 
 export function EventDetailPanel({ event, onClose }: Props) {
+  const isMobile = useIsMobile();
+
+  const motionProps = isMobile
+    ? {
+        initial: { y: '100%' as const, opacity: 0 },
+        animate: { y: 0, opacity: 1 },
+        exit: { y: '100%' as const, opacity: 0 },
+      }
+    : {
+        initial: { x: 400, opacity: 0 },
+        animate: { x: 0, opacity: 1 },
+        exit: { x: 400, opacity: 0 },
+      };
+
+  const panelClassName = isMobile
+    ? "fixed bottom-0 left-0 right-0 w-full max-h-[60vh] bg-slate-900 border-t border-slate-700 z-[1000] overflow-y-auto shadow-2xl rounded-t-2xl"
+    : "absolute right-0 top-0 h-full w-96 bg-slate-900 border-l border-slate-700 z-[1000] overflow-y-auto shadow-2xl";
+
   return (
     <AnimatePresence>
       {event && (
         <motion.div
-          initial={{ x: 400, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 400, opacity: 0 }}
+          {...motionProps}
           transition={{ type: "spring", damping: 25, stiffness: 200 }}
-          className="absolute right-0 top-0 h-full w-96 bg-slate-900 border-l border-slate-700 z-[1000] overflow-y-auto shadow-2xl"
+          className={panelClassName}
         >
           <div className="flex items-center justify-between p-4 border-b border-slate-700">
             <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
@@ -31,7 +48,7 @@ export function EventDetailPanel({ event, onClose }: Props) {
             <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">✕</button>
           </div>
 
-          <div className="p-4 space-y-4">
+          <div className={`p-4 space-y-4${isMobile ? " mobile-scroll overflow-y-auto" : ""}`}>
             <div>
               <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${SEVERITY_BADGE[event.severity]}`}>
                 {event.severity}
