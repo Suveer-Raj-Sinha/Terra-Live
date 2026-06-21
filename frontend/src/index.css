@@ -3,9 +3,12 @@
 @tailwind utilities;
 
 /* ── Mobile Touch & Scroll Optimizations ── */
-html, body {
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
   touch-action: manipulation; /* prevent double-tap zoom */
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none; /* prevent pull-to-refresh & bounce */
 }
 
 /* Smooth scrolling in overlay panels on touch devices */

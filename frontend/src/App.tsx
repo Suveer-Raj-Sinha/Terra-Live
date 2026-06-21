@@ -46,7 +46,7 @@ export default function App() {
   }) ?? [];
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-white">
+    <div className="fixed inset-0 flex flex-col bg-slate-950 text-white">
 
       {/* Header */}
       <header className="flex items-center justify-between px-3 md:px-6 py-3 bg-slate-900 border-b border-slate-700 z-10 shrink-0">
